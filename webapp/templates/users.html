@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-people"></i> User Management
+        </h1>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="bi bi-person-plus"></i> Add User
+            </button>
+            <span class="badge bg-primary ms-2">Total: {{ users|length }}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="usersTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Telegram ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Submitted</th>
+                            <th>Approved</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr id="user-{{ user.telegram_user_id }}">
+                            <td>
+                                <code>{{ user.telegram_user_id }}</code>
+                            </td>
+                            <td>
+                                {% if user.username %}
+                                    <i class="bi bi-at"></i>{{ user.username }}
+                                {% else %}
+                                    <em class="text-muted">No username</em>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.full_name or 'N/A' }}</td>
+                            <td>
+                                <span class="badge role-badge-{{ user.telegram_user_id }}" 
+                                      data-role="{{ user.role }}">
+                                    {% if user.role == 'admin' %}
+                                        <i class="bi bi-shield-fill-check"></i> Admin
+                                    {% elif user.role == 'accountant' %}
+                                        <i class="bi bi-calculator"></i> Accountant
+                                    {% else %}
+                                        <i class="bi bi-person"></i> User
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>{{ user.department or '-' }}</td>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ user.total_invoices_submitted or 0 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    {{ user.total_invoices_approved or 0 }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ user.created_at | datetime }}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                            data-bs-toggle="dropdown">
+                                        Set Role
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="#" 
+                                               onclick="setRole({{ user.telegram_user_id }}, 'user')">
+                                                <i class="bi bi-person"></i> User
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="#" 
+                                               onclick="setRole({{ user.telegram_user_id }}, 'accountant')">
+                                                <i class="bi bi-calculator"></i> Accountant
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="#" 
+                                               onclick="setRole({{ user.telegram_user_id }}, 'admin')">
+                                                <i class="bi bi-shield-fill-check"></i> Admin
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-people display-4"></i>
+                                <p class="mt-2">No users yet</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-plus"></i> Add New User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="telegram_user_id" class="form-label">
+                            Telegram User ID <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="telegram_user_id" 
+                               name="telegram_user_id" 
+                               required
+                               placeholder="e.g., 123456789">
+                        <small class="text-muted">
+                            Để lấy Telegram ID: gửi tin nhắn cho bot @userinfobot
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username (optional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">@</span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="username" 
+                                   name="username" 
+                                   placeholder="username">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Full Name (optional)</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="full_name" 
+                               name="full_name" 
+                               placeholder="Nguyễn Văn A">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="user">User</option>
+                            <option value="accountant">Accountant</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="addUser()">
+                    <i class="bi bi-plus-circle"></i> Add User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="roleToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addUser() {
+    const form = $('#addUserForm');
+    const formData = form.serialize();
+    
+    // Validate
+    const telegramId = $('#telegram_user_id').val();
+    if (!telegramId) {
+        alert('Vui lòng nhập Telegram User ID!');
+        return;
+    }
+    
+    $.ajax({
+        url: '/users/add',
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            // Close modal
+            bootstrap.Modal.getInstance($('#addUserModal')).hide();
+            
+            // Show toast
+            $('#toastMessage').text(response.message);
+            const toast = new bootstrap.Toast($('#roleToast'));
+            toast.show();
+            
+            // Reload page after 1 second
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON?.message || 'Có lỗi xảy ra!';
+            alert('Error: ' + message);
+        }
+    });
+}
+
+function setRole(userId, newRole) {
+    if (!confirm(`Bạn có chắc muốn đổi role thành ${newRole}?`)) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/users/set_role/${userId}`,
+        method: 'POST',
+        data: { role: newRole },
+        success: function(response) {
+            // Update badge
+            const badge = $(`.role-badge-${userId}`);
+            badge.removeClass('bg-primary bg-warning bg-danger');
+            
+            let icon = '';
+            let bgClass = '';
+            if (newRole === 'admin') {
+                icon = '<i class="bi bi-shield-fill-check"></i>';
+                bgClass = 'bg-danger';
+            } else if (newRole === 'accountant') {
+                icon = '<i class="bi bi-calculator"></i>';
+                bgClass = 'bg-warning';
+            } else {
+                icon = '<i class="bi bi-person"></i>';
+                bgClass = 'bg-primary';
+            }
+            
+            badge.addClass(bgClass);
+            badge.html(`${icon} ${newRole.charAt(0).toUpperCase() + newRole.slice(1)}`);
+            badge.attr('data-role', newRole);
+            
+            // Show toast
+            $('#toastMessage').text(response.message);
+            const toast = new bootstrap.Toast($('#roleToast'));
+            toast.show();
+            
+            // Highlight row
+            $(`#user-${userId}`).addClass('table-success');
+            setTimeout(() => {
+                $(`#user-${userId}`).removeClass('table-success');
+            }, 2000);
+        },
+        error: function(xhr) {
+            alert('Error: ' + xhr.responseJSON.message);
+        }
+    });
+}
+</script>
+{% endblock %}
